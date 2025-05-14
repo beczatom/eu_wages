@@ -1,0 +1,620 @@
+
+# Analýza priemerných miest v štátoch Európskej únie
+
+Jedným z najdôležitejších ukazateľov (aj keď nie jediným) kvality života v rôznych štátoch je nesporne priemerná mesačná mzda.
+V tejto práci sa zamerám na jej analýzu vo vybraných štátoch Európskej únie v roku 2015.
+
+Hlavnými cieľmi práce sú odpovedať na nasledujúce otázky:
+
+* Aké hodnoty má sledovaná veličina? Aká je priemerná mzda naprieč EÚ? Ktoré štáty najviac vyčnievajú?
+* Aké iné veličiny ovplyvňujú mzdu? Ktoré z nich majú najväčší dopad?
+* Ako je možné z daných veličín aproximovať reálnu hodnotu priemernej mzdy? Je daný vzťah spoľahlivý?
+
+----
+
+### Načítanie knižníc
+
+```{r message=FALSE, warning=FALSE}
+library(eurostat)
+library(corrplot)
+library(vtable)
+library(car)
+```
+
+----
+
+## Úloha 1
+
+* Krátce prezentujte rozdělení průměrných mezd a jeho charakteristiky číselně i graficky.
+* Diskutujte, které údaje o zemích by mohly mít na průměrné mzdy vliv.
+
+----
+
+### Priemerná mzda
+
+Hodnoty priemernej mzdy získam z Eurostatu, konkrétne z datasetu *nama_10_fte*.
+Ten obsahuje dáta z 26 krajín EÚ, v skúmanom roku 2015 však chýba *Spojené kráľovstvo*, ktoré vtedy ešte bolo súčasťou EÚ, a *Holandsko*, ktoré je v metadátach uvedené ako chýbajúce, každopádne bez udania dôvodu.
+
+Dataset takisto obsahuje priemernú mzdu **EU27_2020**, ktorá je pre 27 krajín súčasneho zloženia EÚ (vrátane Holandska), táto hodnota však práve kvôli Spojenému kráľovstvu nie je priemernou mzdou EÚ v tom čase, ničmenej vo vizualizáciách ju s ňou stotožním.
+V geografickej polohe môžeme nájsť aj **EA20**, ktorá je vypočítaná ako priemerná mzda pre 20 krajín súčasnej eurozóny (množine členov EÚ, ktorí používajú spoločnú menu - euro). Ani tento ukazateľ sa nezaobíde bez nepresností, keďže v skúmanom roku 2015, mala eurozóna 19 členov (*Chorvátsko* prijalo euro v roku 2023). Takisto ako vyššie, zmenu vo vizualizáciách zanedbávam. 
+
+Menou, v ktorej budem skúmať mzdy, bude euro. 
+A keďže nie sme zvyknutý na ročnú mzdu, pre lepšie predstavenie ju prevediem na mesačnú.
+
+```{r message=FALSE, warning=FALSE}
+# dataset s priemernymi mzdami
+salary = get_eurostat('nama_10_fte')
+
+# skumane obdobie a mena
+salary = salary[salary$TIME_PERIOD == '2015-01-01',]
+salary = salary[salary$unit == 'EUR',]
+
+# sledovane regiony
+countries_2015 = unique(salary$geo)
+
+# nepotrebne udaje zmazem
+salary$freq = NULL
+salary$unit = NULL
+salary$TIME_PERIOD = NULL
+names(salary) = c('geo', 'salary')
+
+# prevod rocnej priemernej mzdy na mesacnu
+salary$salary = as.integer(salary$salary / 12)
+
+# rozdelenie na krajiny a skupiny krajin
+salary_eu = salary[-grep('^.{2}$' , salary$geo),]
+salary = salary[grep('^.{2}$' , salary$geo),]
+
+salary$geo = as.factor(salary$geo)
+salary
+```
+
+#### Charakteristika
+
+Pozrieme sa bližšie na významné štatistické miery.
+
+```{r}
+summ <- c('notNA(x)', 'mean(x)', 'sd(x)', 'min(x)', 'pctile(x)[25]', 
+          'median(x)', 'pctile(x)[75]', 'max(x)', 'IQR(x)')
+sumtable(data.frame(salary$salary), out="return", summ=summ)
+```
+
+Vidíme, že skutočne máme 26 štátov, s najmenšou priemernou mzdou 531€ a najvyššou 5116€.
+Čo je takmer desaťnásobok, môžeme teda očakávať že mzdy budú veľmi rozptýlené, čo dosvedčuje aj vysoká smerodatná odchýlka.
+Ďalej je možné vidieť, že aj priemer týchto priemerov je vyšší ako medián, čo znamená, že máme málo veľmi bohatých štátov.
+
+
+```{r}
+par(mfrow = c(1, 2))
+hist(salary$salary, main = '', xlab = 'Mzda [ € ]', ylab = 'Frekvencia', col = 'lightblue')
+boxplot(salary$salary, ylab = 'Mzda [ € ]', col = 'lightblue')
+mtext('Priemerná mesačná mzda', outer = TRUE, cex = 1.75, line = -2.5)
+```
+
+Na histograme vidíme, akoby bola Únia rozdelená na chudobnejšiu (1000 - 2000€) a bohatšiu (3000 - 4000€) časť.
+Samozrejme je vidieť aj 3 štáty ktoré sú medzi týmito skupinami.
+Máme aj veľmi chudobné štáty (na európske pomery), ktoré majú priemernú mzdu pod 1000€, ale aj veľmi bohaté štáty nad 4000€.
+
+```{r}
+par(mar=c(6,5,4,1))
+data_with_cat = rbind(salary, salary_eu)
+data_with_cat$cat = grepl('^.{2}$' , data_with_cat$geo)
+data_with_cat$cat = as.character(data_with_cat$cat)
+data_with_cat = data_with_cat[order(data_with_cat$salary, decreasing = TRUE),]
+
+data_with_cat$cat = ifelse(data_with_cat$cat, 'lightblue', 'yellow')
+
+barplot(data_with_cat$salary, names.arg = data_with_cat$geo, ylab = 'Mzda [ € ]', 
+        col = data_with_cat$cat, las= 2)
+mtext('Priemerná mesačná mzda v EÚ', outer = TRUE, cex = 1.75, line = -2.5)
+```
+
+Rebríček najvyšších miezd neprekvapivo otvára *Luxembursko* nasledované *Dánskom* a *Írskom*.
+Najnižšie mzdy sú v *Bulharsku* a *Rumunsku*.
+Ďalej je možné vidieť, že priemerná mzda v eurozóne je vyššia ako v celej EÚ súhrnne.
+Najväčšie krajiny EÚ ako *Nemecko*, *Francúzsko* a *Taliansko* ovplyvňujú celkovú priemernú mzdu výraznejšie ako ostatné štáty a teda sú aj blízko priemeru za EÚ.
+
+### Faktory ovplyvňujúce priemernú mzdu
+
+Existuje množstvo údajov, ktoré majú dané štáty odlišné.
+Chceme sa však zamerať na také ukazatele, ktoré by mohli mať vplyv na priemernú mzdu v štáte.
+
+**HDP na obyvateľa** môže hrať snáď najdôležitejšiu rolu. 
+Veľmi dôležitý ukazateľ, ktorý sa často globálne používa aj sám osebe ako numerickým vyjadrením kvality krajiny.
+Asi je pomerne intuitívny nápad, že kde je viac peňazí, tam sa aj viac ujde jednotlivcovi.
+
+Z vyššieho grafu je vidno napríklad, že z prvých troch krajín používajú **euro** dve, z posledných ani jedna.
+Navyše priemer eurozóny je vyšší ako celej EÚ, teda je logické uvažovať aj tento vplyv.
+Na prijatie do eurozóny je potrebné splniť prísne ekonomické podmienky, čo teda môže znamenať, že krajine sa ekonomicky darí, tým pádom môže byť predpoklad na vyššiu mzdu oprávnený. 
+
+Veľmi často sa stretávame aj s tvrdeniami, že titul z **vysokej školy** zabezpečí osobe nadpriemerný príjem.
+Preto má zmysel uvažovať podiel absolventov týchto škôl v populácii krajiny.
+Títo absolventi sú schopní vykonávať práce s vysokými požiadavkami na znalosti, ktoré sú aspoň do istej miery odmenené.
+
+Pozorné očko si v grafe vyššie všimne, že všetky krajiny nad európskym priemerom sa **pripojili k EÚ** ešte v minulom storočí (dokonca tisícročí).
+Na vstup do EÚ je potrebné tiež splniť radu požiadaviek.
+Členstvo v EÚ poskytuje priaznivé prostredie pre obchod a celkovo legislatívny aparát podporujúci rast miezd.
+Netreba zabudnúť ani na eurofondy, ktoré krajina čerpá aj na podporu zamestnania.
+
+----
+
+## Úloha 2:
+
+* Pro zkoumané země si vhodně zvolte čtyři údaje dostupné z databází Eurostatu či jiných externích zdrojů. Může se jednat např. o demografické, geografické nebo ekonomické ukazatele. Alespoň jedna proměnná nechť je numerická a alespoň jedna kategoriální (např. zda má země přístup k moři, zda se v zemi platí Eurem, jestli se jedná o monarchii nebo republiku,…​).
+* Tyto údaje budou sloužit jako regresory, proto je zvolte tak, aby modelovanou veličinu alespoň v minimální míře determinovaly. Vztah k mzdám ověřte.
+* Prezentujte důležité vlastnosti zvolených ukazatelů číselně i graficky.
+* Pomocí vhodných testů prozkoumejte závislosti mezi regresory.
+
+----
+
+### HDP na obyvateľa
+
+Dáta získam z Eurostatu, konkrétne z *tipsna40*.
+Dataset obsahuje údaje o hodnote HDP na obyvateľa vo vybraných európskych krajinách.
+Ja sa zameriam na rok 2015 a krajiny v ktorých mám priemernú mzdu.
+
+```{r warning=FALSE, message=FALSE}
+gdp = get_eurostat('tipsna40')
+
+# zúženie dát na 2015 a krajiny z datasetu so mzdami
+gdp = gdp[gdp$TIME_PERIOD == '2015-01-01',]
+gdp = gdp[gdp$geo %in% countries_2015,]
+gdp$freq = NULL
+gdp$unit = NULL
+gdp$na_item = NULL
+gdp$TIME_PERIOD = NULL
+
+names(gdp) = c('geo', 'gdp')
+
+# uloženie dát na vizualizáciu a analýzu zvlášť
+gdp_eu = gdp[-grep('^.{2}$' , gdp$geo),]
+gdp = gdp[grep('^.{2}$' , gdp$geo),]
+
+gdp$geo = as.factor(gdp$geo)
+gdp
+```
+
+#### Charakteristika
+
+```{r}
+summ <- c('notNA(x)', 'mean(x)', 'sd(x)', 'min(x)', 'pctile(x)[25]', 
+          'median(x)', 'pctile(x)[75]', 'max(x)', 'IQR(x)')
+sumtable(data.frame(gdp$gdp), out="return", summ=summ)
+```
+
+Je vidno obrovský rozdiel medzi priemerom a mediánom, preto očakávam, že tu bude zopár skutočne odľahlých hodnôt.
+
+```{r}
+par(mfrow = c(1, 2))
+hist(gdp$gdp, main = '', xlab = 'GDP per capita [ € / capita ]', ylab = 'Frequency', col = 'lightblue')
+boxplot(gdp$gdp, ylab = 'GDP per capita [ € / capita ]', col = 'lightblue')
+mtext('GDP per capita', outer = TRUE, cex = 1.75, line = -2.5)
+```
+
+Na grafe je vidno, že veľká väčšina krajín má HDP na obyvateľa do 40 tisíc eur. 
+Nad touto hranicou sa nachádzajú už len štyri krajiny.
+
+
+```{r}
+par(mar=c(6,5,4,1))
+data_with_cat = rbind(gdp, gdp_eu)
+data_with_cat$cat = grepl('^.{2}$' , data_with_cat$geo)
+data_with_cat$cat = as.character(data_with_cat$cat)
+data_with_cat = data_with_cat[order(data_with_cat$gdp, decreasing = TRUE),]
+
+data_with_cat$cat = ifelse(data_with_cat$cat, 'lightblue', 'yellow')
+
+barplot(data_with_cat$gdp, names.arg = data_with_cat$geo, ylab = 'GDP per capita [ € / capita ]', 
+        col = data_with_cat$cat, las= 2, cex.axis = 0.7)
+mtext('GDP per capita in EU countries', outer = TRUE, cex = 1.75, line = -2.5)
+```
+
+Máme možnosť vidieť takmer identický graf ako graf priemerných mesačných miezd.
+Výrazným rozdielom je ešte vytŕčajúce *Luxembursko*, ktoré to dosahuje hlavne kvôli svojej malej populácii.
+
+#### Vzťah s priemernou mzdou
+
+```{r}
+data = merge(gdp, salary)
+data_eu = merge(gdp_eu, salary_eu)
+plot(data$gdp, data$salary, col = 'blue', pch = 16, main='GDP and average wage in EU',
+     xlab = 'GDP per capita [ € / capita ]', ylab = 'Average monthly wage [ € ]')
+points(data_eu$gdp, data_eu$salary, col=c('yellow', 'orange'), pch=16)
+legend('bottomright', legend = c('EU member states', 'Eurozone mean', 'EU mean'), 
+       col = c('blue', 'yellow', 'orange'), pch = 16)
+```
+
+Až na zopár bodov, je vidno, že medzi veličinami je takmer dokonalý lineárny vzťah.
+Pozrime sa preto na Pearsonov korelačný koeficient a otestujme.
+
+$ H_0 : \rho = 0 $
+
+$ H_A : \rho \ne 0 $
+
+```{r}
+cor.test(data$gdp, data$salary, method = 'pearson')
+```
+
+Na hladine $\alpha = 5 \%$ zamietam $H_0$ v prospech hypotézy, že veličiny sú korelované.
+
+### Členstvo v eurozóne
+
+Dáta získam z verejne dostupných informácií a uložím do jednoduchého dataframe-u.
+
+```{r}
+eurozone_member = data.frame(
+  geo = countries_2015[grep('^.{2}$', countries_2015)],
+  euro = c(1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1)
+)
+eurozone_member$geo = as.factor(eurozone_member$geo)
+eurozone_member$euro = as.factor(eurozone_member$euro)
+data = merge(data, eurozone_member)
+```
+
+#TODO vložiť graf z plotly 
+
+### Charakteristika a vplyv na platy
+
+```{r}
+par(mfrow = c(1, 2))
+
+# factor je cislovany od 1
+with_euro = sum(as.integer(data$euro) - 1)
+
+pie(c(with_euro, length(data$euro) - with_euro), 
+    labels = c(paste0('Euro (', with_euro, ')'), 
+               paste0('National currency (', length(data$euro) - with_euro, ')')),
+    init.angle = 180, 
+    col = c('lightblue', 'yellow'),
+    cex = 0.9)
+
+boxplot(data$salary ~ data$euro, 
+        col = c('yellow', 'lightblue'),
+        ylab = 'Average monthly wage [ € ]', xlab = '',
+        names = c('National currency', 'Euro'))
+```
+
+Ako môžeme vidieť, zo sledovaných štátov platia viac ako dve tretiny eurom.
+Takisto je vidno, že priemerný plat v štátoch platiacich eurom je okolo tisícky vyšší ako kde platia vlastnou menou.
+Napriek malému počtu krajín používajúcich národnú menu, je rozptyl hodnôt takmer rovnaký ako s dvakrát početnejšou skupinou používajúcich euro.
+
+```{r}
+par(mar=c(6,5,5,1))
+
+salary_eu$euro = NA
+
+data_with_cat = rbind(data[c('geo', 'salary', 'euro')], salary_eu)
+data_with_cat = data_with_cat[order(data_with_cat$salary, decreasing = TRUE),]
+data_with_cat$cat = ifelse(is.na(data_with_cat$euro), 'gray', 
+                           ifelse(data_with_cat$euro == 1, 'lightblue', 'yellow'))
+
+barplot(data_with_cat$salary, names.arg = data_with_cat$geo, ylab = 'Average wage per month [ € ]', 
+        col = data_with_cat$cat, las= 2, cex.axis = 0.7)
+mtext('Average wages by euro usage', outer = TRUE, cex = 1.75, line = -2.5)
+legend('topright', legend = c('Euro', 'National currency', 'Not relevant'), 
+       col = c('lightblue', 'yellow', 'gray'), pch = 16)
+```
+
+Z grafu je očividné, kde sa berie vysoká variancia pre štáty platiace národnou menou.
+Môžeme v tejto skupine nájsť dve vysoko nadpriemerné štáty, čo sa platov týka, *Dánsko*, ktoré má z povinnosti prijať euro výnimku a *Švédsko*.
+Ostatné štáty nepoužívajúce euro majú platy nižšie ako polovica z priemeru eurozóny.
+Tam je však možné nájsť aj nenulový počet krajín s eurom.
+
+Poďme teda otestovať vplyv eura na strednú hodnotu mesačných platov.
+
+$ H_0 : $ Stredná hodnota mesačných platov nezávisí na používaní eura.
+
+$ H_A : $ neplatí $ H_0 $.
+
+```{r}
+anova(aov(data$salary ~ data$euro))
+```
+
+Nezamietam hypotézu $ H_0 $ na hladine významnosti $ 5 \%$.
+
+### Vysoké školy
+
+Dáta sú z Eurostatu a ide o dataset *edat_lfse_03*.
+Dataset obsahuje mnoho údajov o absolventoch škôl v európskych štátoch.
+Ja sa budem sústrediť na nami skúmané štáty v roku 2015.
+Ďalej ma budú zaujímať všetky pohlavia a najširšia veková skupina ktorú dataset ponúka - 15 až 64 rokov.
+V tejto vekovej skupine sú uvedené percentá, koľko ĺudí má absolvovaný daný typ školy.
+Uvažuje sa len najvyššie dosiahnuté vzdelanie.
+
+Ďalej ma budú zaujímať len absolventi týchto úrovní vzdelania podľa štandardu *ISCED 2011*:
+
+* úroveň 5 - krátkodobé úspešne ukončené vysokoškolské vzdelanie, 
+* úroveň 6 - bakalárske vzdelanie,
+* úroveň 7 - magisterské vzdelanie,
+* úroveň 8 - doktorandské vzdelanie,
+
+spolu združené v kategórii *ED5-8*.
+
+```{r warning = FALSE, message=FALSE}
+edu = get_eurostat('edat_lfse_03')
+edu = edu[edu$TIME_PERIOD == '2015-01-01',]
+edu = edu[edu$isced11 == 'ED5-8',]
+edu = edu[edu$geo %in% countries_2015,]
+edu = edu[edu$sex == 'T',]
+edu = edu[edu$age == 'Y15-64',]
+
+edu$freq = NULL
+edu$sex = NULL
+edu$age = NULL
+edu$unit = NULL
+edu$isced11 = NULL
+edu$TIME_PERIOD = NULL
+names(edu) = c('geo', 'edu')
+
+edu_eu = edu[-grep('^.{2}$' , edu$geo),]
+edu = edu[grep('^.{2}$' , edu$geo),]
+
+edu$geo = as.factor(edu$geo)
+
+edu
+```
+
+#### Charakteristika 
+
+```{r}
+summ <- c('notNA(x)', 'mean(x)', 'sd(x)', 'min(x)', 'pctile(x)[25]', 
+          'median(x)', 'pctile(x)[75]', 'max(x)', 'IQR(x)')
+sumtable(data.frame(edu$edu), out="return", summ=summ)
+```
+
+Podiel absolventov vysokých škôl je zatiaľ najviac vyrovnaným ukazovateľom v EÚ.
+Priemer medzi krajinami by sme našli presne kde medián - na hodnote 27%.
+Polovica krajín má vysokoškolskú vzdelanosť na úrovni medzi 21 a 33 percent.
+
+```{r}
+par(mfrow = c(1, 2))
+hist(edu$edu, main = '', xlab = 'Tertiary education [ % ]', ylab = 'Frequency', col = 'lightblue')
+boxplot(edu$edu, ylab = 'Tertiary education [ % ]', col = 'lightblue')
+mtext('Tertiary education', outer = TRUE, cex = 1.75, line = -2.5)
+```
+
+Tak ako vyššie čísla naznačovali, skutočne dáta vyzerajú takmer ako z rovnomerného rozdelenia.
+
+
+```{r}
+par(mar=c(6,5,4,1))
+data_with_cat = rbind(edu, edu_eu)
+data_with_cat$cat = grepl('^.{2}$' , data_with_cat$geo)
+data_with_cat$cat = as.character(data_with_cat$cat)
+data_with_cat = data_with_cat[order(data_with_cat$edu, decreasing = TRUE),]
+
+data_with_cat$cat = ifelse(data_with_cat$cat, 'lightblue', 'yellow')
+
+barplot(data_with_cat$edu, names.arg = data_with_cat$geo, ylab = 'Tertiary education [ % ]', 
+        col = data_with_cat$cat, las= 2, cex.axis = 0.7)
+mtext('Tertiary education in EU countries', outer = TRUE, cex = 1.75, line = -2.5)
+```
+
+Najvyššie úrovne vysokoškolského vzdelania sú v *Írsku*, na *Cypre* a vo *Fínsku*.
+Írske a fínske školy sú celosvetovo známe pre svoju kvalitu, preto nie je prekvapením, že miestni vidia možno väčší zmysel v štúdiu ako priemerný občan EÚ.
+Cyprus je prekvapivým štátom, vysoký podiel môže byť zapríčinený blízkym ľudnatým Tureckom a všeobecne je najbližším EÚ štátom aj pre Blízky východ a časť Afriky.
+Týchto ľudí z okolia možno láka geografická blízkosť a vidina uznávaného titulu z členského štátu EÚ.
+Táto krajina je tiež známa nízkou daňovou záťažou a preto má veľa firiem (formálne) sídlo pre EÚ práve tu.
+No a je všeobecne známe, že korporáty si potrpia na vzdelanie.
+
+Najnižšie môžeme nájsť v *Rumunsku*, *Taliansku* a na *Slovensku*.
+Rumunsko a Slovensko sú určite krajiny, ktoré trpia "odlivom mozgov". 
+Ťažko nájsť dôvod prečo sa však nedarí Taliansku. 
+Môže byť, že v krajine sa nie je veľký problém zamestnať bez vysokej školy a tak nie je veľmi populárnou voľbou.
+Je tiež známe, že napriek veľmi rozvinutému severu krajiny, na juhu možnosti zďaleka nie sú rovnaké, tento rozdiel v regiónoch sa možno práve v tejto štatistike odzrkadľuje.
+
+#### Vzťah s priemernou mzdou
+
+```{r}
+data = merge(data, edu)
+data_eu = merge(edu_eu, salary_eu)
+plot(data$edu, data$salary, col = 'blue', pch = 16, main='Tertiary education and average wage in EU',
+     xlab = 'Tertiary education [ % ]', ylab = 'Average monthly wage [EUR]')
+points(data_eu$edu, data_eu$salary, col=c('yellow', 'orange'), pch=16)
+legend('topleft', legend = c('EU member states', 'Eurozone mean', 'EU mean'), 
+       col = c('blue', 'yellow', 'orange'), pch = 16)
+```
+
+Preložiť tieto body nejakou priamkou asi veľmi zmysel nedáva.
+Minimálne však je vidno, že väčšinou s úrovňou vysokoškolského vzdelania rastie aj priemerný plat.
+
+Poďme si koreláciu otestovať testom nulovosti *Pearsonovho* korelačného koeficientu.
+
+$ H_0 : \rho = 0 $
+
+$ H_A : \rho \ne 0 $
+
+```{r}
+cor.test(data$edu, data$salary, method = 'pearson')
+```
+Na hladine $\alpha = 5 \%$ zamietam $H_0$ v prospech hypotézy, že veličiny sú korelované.
+
+### Dĺžka členstva v EÚ
+
+Údaje o dĺžke členstva som získal z verejne dostupných zdrojov.
+
+```{r}
+joined = data.frame(
+  geo = countries_2015[grep('^.{2}$' , countries_2015)],
+  in_eu = 2015 - c(1995, 1958, 2007, 2004, 2004, 1958, 1973, 2004, 1981, 1986, 
+                    1995, 1958, 2013, 2004, 1973, 1958, 2004, 1958, 2004, 2004, 
+                    2004, 1986, 2007, 1995, 2004, 2004)
+)
+joined$geo = as.factor(joined$geo)
+data = merge(data, joined)
+```
+
+#### Charakteristika
+
+```{r}
+summ <- c('notNA(x)', 'mean(x)', 'sd(x)', 'min(x)', 'pctile(x)[25]', 
+          'median(x)', 'pctile(x)[75]', 'max(x)', 'IQR(x)')
+sumtable(data.frame(data$in_eu), out="return", summ=summ)
+```
+
+Najstarší členovia (zakladajúci) sú v Únii už 57 rokov (od 1958). 
+Najmladšie *Chorvátsko* sa pripojilo pred dvomi rokmi.
+Časovým obdobím, ktoré rozdeľuje Úniu na (takmer) rovnako veľké dve časti starých a nových členov je 16 rokov.
+
+#### Vzťah s priemernou mzdou 
+
+```{r}
+plot(data$in_eu, data$salary, col = 'blue', pch = 16, main='Length of EU membership and average monthly wage',
+     xlab = 'Length of membership [ years ]', ylab = 'Average monthly wage [EUR]')
+```
+
+Tu by sa vzťah hľadal jednoduchšie ako pri vzdelaní. 
+Pre rôzne tvrdenia o zmene v čase nemám momentálne údaje a sústredím sa na jeden rok.
+Je však asi celkom pochopiteľné, že za bežných okolností, čím dlhší je čas stravéný v EÚ, tým viac môžu meniť štáty meniť ekonomiku na vzor vyspelejšieho jadra.
+Takisto sa zvyšuje aj tlak na zvyšovanie miezd, keďže práca v zahraničí už nie je taký problém.
+
+Tvrdenia podporím testom nulovosti *Pearsonovho* korelačného koeficientu.
+
+$ H_0 : \rho = 0 $
+
+$ H_A : \rho \ne 0 $
+
+```{r}
+cor.test(data$in_eu, data$salary, method = 'pearson')
+```
+
+Na hladine $\alpha = 5 \%$ zamietam $H_0$ v prospech hypotézy, že veličiny sú korelované.
+
+### Korelačná analýza regresorov
+
+Overme ako jednotlivé regresory spolu korelujú testom nulovosti *Pearsonových* korelačných koeficientov. 
+Máme teda hypotézy:
+
+$H_{0; i, j} : \rho_{i, j} = 0$
+
+$H_{A; i, j} : \rho_{i, j} \ne 0$
+
+kde $i,j \in \{\text{HDP}, \text{vzdelanie}, \text{euro}, \text{dĺžka členstva} \}$.
+
+Na testovanie využijem funkciu *corr_test* z knižnice `psych`.
+Tá spočíta odhady $\rho_{i,j}$ a $p$-hodnoty všetkých dvojíc regresorov.
+Keďže regresor *euro* je kategorický, pretypujem ho v súlade s *one-hot encoding* na numerický.
+
+```{r}
+#install.packages("psych")
+library(psych)
+
+data_for_corr_test = data[c('gdp', 'edu', 'euro', 'in_eu')]
+data_for_corr_test$euro = as.integer(data_for_corr_test$euro) - 1
+
+res = corr.test(data_for_corr_test, method = "pearson", adjust = "none")
+
+res$r
+
+res$p
+```
+
+Z výslednej matice $p$-hodnôt nezamietam hypotézy o nekorelovanosti pre dvojice 
+`gdp`-`euro`, `edu`-`euro` a  `edu`-`in_eu` na $5\%$ hladine významnosti. 
+
+Z výslednej matice $p$-hodnôt zamietam hypotézy o nekorelovanosti pre dvojice 
+`gdp`-`edu`, `gdp`-`in_eu` a  `euro`-`in_eu` v prospech hypotézy, že regresory sú korelované na $5\%$ hladine významnosti. 
+
+
+```{r}
+corrplot(res$r, method = 'square')
+```
+
+Poďme teda odstrániť regresory ktoré sú zbytočné.
+Nato použijem faktor zväčšenia rozptylu **VIF**.
+
+
+```{r}
+data.frame(vif(lm(salary ~ gdp + euro + edu + in_eu, data = data)))
+```
+
+Bežnou praxou je odstraňovať regresory, ktoré majú VIF vyššie ako 5, poprípade 10.
+Napriek tomu, že polovica testov napovedá problémy s kolinearitou, najvyšší odhad spomedzi korelačných koeficientov je však $0.67$.
+Hodnota VIF, však nepracuje s dvojicami, ale snaží sa nájsť "vinníka".
+Pri vynechaní $k$-tého regresora spočíta koeficient determinácie $R_k$.
+Táto hodnota teda udáva podiel variability vysvetlený ostatnými regresormi.
+No, $1 - R_k$ potom bude časť, ktorú ostatné nevysvetľujú. 
+Hodnota $\mathrm{VIF}_k = \frac{1}{1-R_k}$ teda udáva koľkokrát sa zväčší variabilita modelu ako dôsledok kolinearity $k$-tého regresora.
+
+Jedno z vysvetlení prečo nemáme hodnoty nad 5, je to, že síce jednotlivé dvojice sú korelované, dôležité je, že nie príliš, resp. že nedokážeme nájsť regresor, ktorý by bol vyjadriteľný nejakým skalárnym súčinom vektora koeficientov a vektora zvyšných regresorov.
+Zjavne, každý z regresorov nesie podiel variability vysvetľovanej veličiny.
+Preto si dovolím použiť všetky regresory.
+
+----
+
+## Úloha 3
+
+* Pomocí lineárního regresního modelu nebo jeho variant zkoumejte závislost mezd na všech regresorech.
+* Prakticky interpretujte hodnoty odhadů regresních koeficientů.
+* Zhodnoťte kvalitu modelu.
+* Identifikujte odlehlá pozorování a prozkoumejte multikolinearitu.
+* Otestujte předpoklady modelu - pokud nebudou splněny, navrhněte a vyzkoušejte metody, které nesplnění kompenzují nebo se bez        předpokladů obejdou.
+* Pomocí vhodných nástrojů se pokuste najít finální (pod-)model, který chování mezd dobře vysvětluje, ale neobsahuje nevýznamné       komponenty. Prakticky interpretujte získané výsledky.
+
+
+----
+
+```{r}
+fit_all = lm(salary ~ gdp + euro + edu + in_eu, data = data)
+summary(fit_all)
+```
+
+```{r}
+par(mfrow=c(1, 3))
+plot(fit_all, which = c(1, 2, 3))
+```
+```{r}
+hist(fit_all$residuals)
+```
+
+
+
+```{r}
+shapiro.test(fit_all$residuals)
+```
+
+```{r}
+fit_all_int = lm(salary ~ gdp * euro * edu * in_eu, data = data)
+summary(fit_all_int)
+```
+
+```{r}
+par(mfrow=c(1, 3))
+plot(fit_all_int, which = c(1, 2, 3))
+```
+
+```{r}
+hist(fit_all_int$residuals)
+```
+
+```{r}
+shapiro.test(fit_all_int$residuals)
+```
+
+```{r}
+step(lm(data$salary~1), 
+     scope = list(lower=~1, upper=~data$gdp * data$euro * data$edu * data$in_eu))
+```
+```{r}
+fit_fin = lm(formula = data$salary ~ data$gdp + data$euro + data$in_eu + 
+    data$gdp:data$in_eu + data$in_eu:data$euro)
+summary(fit_fin)
+```
+
+```{r}
+fit_fin = lm(formula = data$salary ~ data$gdp + data$in_eu + 
+    data$gdp:data$in_eu + data$in_eu:data$euro)
+summary(fit_fin)
+```
+```{r}
+par(mfrow=c(1, 3))
+plot(fit_fin, which = c(1, 2, 3))
+```
+```{r}
+hist(fit_fin$residuals)
+```
+
+```{r}
+shapiro.test(fit_fin$residuals)
+```
+
