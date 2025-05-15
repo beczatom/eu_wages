@@ -1,5 +1,5 @@
 
-# Analýza priemerných miest v štátoch Európskej únie
+# Analýza priemerných miezd v štátoch Európskej únie
 
 Jedným z najdôležitejších ukazateľov (aj keď nie jediným) kvality života v rôznych štátoch je nesporne priemerná mesačná mzda.
 V tejto práci sa zamerám na jej analýzu vo vybraných štátoch Európskej únie v roku 2015.
@@ -21,6 +21,8 @@ library(vtable)
 library(car)
 #install.packages("psych")
 library(psych)
+#install.packages("plotly")
+library(plotly)
 library(lmtest)
 ```
 
@@ -814,8 +816,6 @@ data_eu
 
 
 ```{r}
-#install.packages("plotly")
-library(plotly)
 
 data_to_plot = data
 data_to_plot$geo = c("AUT", "BEL", "BGR", "CYP", "CZE", "DEU", "DNK", "EST", "GRC", "ESP",
@@ -823,7 +823,7 @@ data_to_plot$geo = c("AUT", "BEL", "BGR", "CYP", "CZE", "DEU", "DNK", "EST", "GR
  "POL", "PRT", "ROU", "SWE", "SVN", "SVK")
 
 
-fig <- plot_ly(
+fig = plot_ly(
   data = data_to_plot,
   type = 'choropleth',
   locations = ~geo,
@@ -836,13 +836,13 @@ fig <- plot_ly(
   )
 )
 
-fig <- fig %>% layout(
+fig = fig %>% layout(
   margin = list(l = -500, r = 0, b = 0, t = 0),
   geo = list(
     scope = 'world',
-    projection = list(type = 'mercator'),
-    lonaxis = list(range = c(-25, 45)),
-    lataxis = list(range = c(38, 73)),
+    projection = list(type = "winkel tripel"),
+    lonaxis = list(range = c(-20, 40)),
+    lataxis = list(range = c(33, 72)),
     showcountries = TRUE,
     countrycolor = "white"
   )
@@ -851,3 +851,128 @@ fig <- fig %>% layout(
 fig
 
 ```
+
+```{r}
+
+fig = plot_ly(
+  data = data_to_plot,
+  type = 'choropleth',
+  locations = ~geo,
+  locationmode = 'ISO-3',
+  z = ~salary,
+  colorscale = list(
+    c(0.0, "#f5fdaeff"),
+    c(0.5, "#48afa0ff"),
+    c(1.0, "#035376ff")
+  )
+)
+
+fig = fig %>% layout(
+  margin = list(l = -500, r = 0, b = 0, t = 0),
+  geo = list(
+    scope = 'world',
+    projection = list(type = "winkel tripel"),
+    lonaxis = list(range = c(-20, 40)),
+    lataxis = list(range = c(33, 72)),
+    showcountries = TRUE,
+    countrycolor = "white"
+  )
+)
+
+fig
+
+```
+
+
+```{r}
+
+fig = plot_ly(
+  data = data_to_plot,
+  type = 'choropleth',
+  locations = ~geo,
+  locationmode = 'ISO-3',
+  z = ~edu,
+  colorscale = list(
+    c(0.0, "#f5fdaeff"),
+    c(0.5, "#48afa0ff"),
+    c(1.0, "#035376ff")
+  )
+)
+
+fig = fig %>% layout(
+  margin = list(l = -500, r = 0, b = 0, t = 0),
+  geo = list(
+    scope = 'world',
+    projection = list(type = "winkel tripel"),
+    lonaxis = list(range = c(-20, 40)),
+    lataxis = list(range = c(33, 72)),
+    showcountries = TRUE,
+    countrycolor = "white"
+  )
+)
+
+fig
+
+```
+
+```{r}
+fig = plot_ly(
+  data = data_to_plot,
+  type = 'choropleth',
+  locations = ~geo,
+  locationmode = 'ISO-3',
+  z = ~in_eu,
+  colorscale = list(
+    c(0.0, "#f5fdaeff"),
+    c(0.5, "#48afa0ff"),
+    c(1.0, "#035376ff")
+  )
+)
+
+fig = fig %>% layout(
+  margin = list(l = -500, r = 0, b = 0, t = 0),
+  geo = list(
+    scope = 'world',
+    projection = list(type = "winkel tripel"),
+    lonaxis = list(range = c(-20, 40)),
+    lataxis = list(range = c(33, 72)),
+    showcountries = TRUE,
+    countrycolor = "white"
+  )
+)
+
+fig
+
+```
+
+```{r warning=FALSE}
+
+fig = plot_ly(
+  data = data_to_plot,
+  type = 'choropleth',
+  locations = ~geo,
+  locationmode = 'ISO-3',
+  z = ~euro,
+  colorscale = list(
+    c(0.0, "#f5fdaeff"),
+    c(1.0, "#035376ff")
+  ),
+  showscale = FALSE
+)
+
+fig = fig %>% layout(
+  margin = list(l = -500, r = 0, b = 0, t = 0),
+  geo = list(
+    scope = 'world',
+    projection = list(type = "winkel tripel"),
+    lonaxis = list(range = c(-20, 40)),
+    lataxis = list(range = c(33, 72)),
+    showcountries = TRUE,
+    countrycolor = "white"
+  )
+)
+
+fig
+
+```
+
