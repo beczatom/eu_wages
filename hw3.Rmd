@@ -19,6 +19,9 @@ library(eurostat)
 library(corrplot)
 library(vtable)
 library(car)
+#install.packages("psych")
+library(psych)
+library(lmtest)
 ```
 
 ----
@@ -86,9 +89,9 @@ Vidíme, že skutočne máme 26 štátov, s najmenšou priemernou mzdou 531€ a
 
 ```{r}
 par(mfrow = c(1, 2))
-hist(salary$salary, main = '', xlab = 'Mzda [ € ]', ylab = 'Frekvencia', col = 'lightblue')
-boxplot(salary$salary, ylab = 'Mzda [ € ]', col = 'lightblue')
-mtext('Priemerná mesačná mzda', outer = TRUE, cex = 1.75, line = -2.5)
+hist(salary$salary, main = '', xlab = 'Wage [EUR]', ylab = 'Frequency', col = 'lightblue')
+boxplot(salary$salary, ylab = 'Wage [EUR]', col = 'lightblue')
+mtext('Average monthly wage in EU countries', outer = TRUE, cex = 1.75, line = -2.5)
 ```
 
 Na histograme vidíme, akoby bola Únia rozdelená na chudobnejšiu (1000 - 2000€) a bohatšiu (3000 - 4000€) časť.
@@ -104,9 +107,9 @@ data_with_cat = data_with_cat[order(data_with_cat$salary, decreasing = TRUE),]
 
 data_with_cat$cat = ifelse(data_with_cat$cat, 'lightblue', 'yellow')
 
-barplot(data_with_cat$salary, names.arg = data_with_cat$geo, ylab = 'Mzda [ € ]', 
+barplot(data_with_cat$salary, names.arg = data_with_cat$geo, ylab = 'Wage [EUR]', 
         col = data_with_cat$cat, las= 2)
-mtext('Priemerná mesačná mzda v EÚ', outer = TRUE, cex = 1.75, line = -2.5)
+mtext('Average monthly wage in EU countries', outer = TRUE, cex = 1.75, line = -2.5)
 ```
 
 Rebríček najvyšších miezd neprekvapivo otvára *Luxembursko* nasledované *Dánskom* a *Írskom*.
@@ -186,8 +189,8 @@ Je vidno obrovský rozdiel medzi priemerom a mediánom, preto očakávam, že tu
 
 ```{r}
 par(mfrow = c(1, 2))
-hist(gdp$gdp, main = '', xlab = 'GDP per capita [ € / capita ]', ylab = 'Frequency', col = 'lightblue')
-boxplot(gdp$gdp, ylab = 'GDP per capita [ € / capita ]', col = 'lightblue')
+hist(gdp$gdp, main = '', xlab = 'GDP per capita [EUR/capita]', ylab = 'Frequency', col = 'lightblue')
+boxplot(gdp$gdp, ylab = 'GDP per capita [EUR/capita]', col = 'lightblue')
 mtext('GDP per capita', outer = TRUE, cex = 1.75, line = -2.5)
 ```
 
@@ -204,7 +207,7 @@ data_with_cat = data_with_cat[order(data_with_cat$gdp, decreasing = TRUE),]
 
 data_with_cat$cat = ifelse(data_with_cat$cat, 'lightblue', 'yellow')
 
-barplot(data_with_cat$gdp, names.arg = data_with_cat$geo, ylab = 'GDP per capita [ € / capita ]', 
+barplot(data_with_cat$gdp, names.arg = data_with_cat$geo, ylab = 'GDP per capita [EUR/capita]', 
         col = data_with_cat$cat, las= 2, cex.axis = 0.7)
 mtext('GDP per capita in EU countries', outer = TRUE, cex = 1.75, line = -2.5)
 ```
@@ -218,7 +221,7 @@ Výrazným rozdielom je ešte vytŕčajúce *Luxembursko*, ktoré to dosahuje hl
 data = merge(gdp, salary)
 data_eu = merge(gdp_eu, salary_eu)
 plot(data$gdp, data$salary, col = 'blue', pch = 16, main='GDP and average wage in EU',
-     xlab = 'GDP per capita [ € / capita ]', ylab = 'Average monthly wage [ € ]')
+     xlab = 'GDP per capita [EUR/capita]', ylab = 'Average monthly wage [EUR]')
 points(data_eu$gdp, data_eu$salary, col=c('yellow', 'orange'), pch=16)
 legend('bottomright', legend = c('EU member states', 'Eurozone mean', 'EU mean'), 
        col = c('blue', 'yellow', 'orange'), pch = 16)
@@ -227,9 +230,9 @@ legend('bottomright', legend = c('EU member states', 'Eurozone mean', 'EU mean')
 Až na zopár bodov, je vidno, že medzi veličinami je takmer dokonalý lineárny vzťah.
 Pozrime sa preto na Pearsonov korelačný koeficient a otestujme.
 
-$ H_0 : \rho = 0 $
+$H_0 : \rho = 0$
 
-$ H_A : \rho \ne 0 $
+$H_A : \rho \ne 0$
 
 ```{r}
 cor.test(data$gdp, data$salary, method = 'pearson')
@@ -251,8 +254,6 @@ eurozone_member$euro = as.factor(eurozone_member$euro)
 data = merge(data, eurozone_member)
 ```
 
-#TODO vložiť graf z plotly 
-
 ### Charakteristika a vplyv na platy
 
 ```{r}
@@ -270,7 +271,7 @@ pie(c(with_euro, length(data$euro) - with_euro),
 
 boxplot(data$salary ~ data$euro, 
         col = c('yellow', 'lightblue'),
-        ylab = 'Average monthly wage [ € ]', xlab = '',
+        ylab = 'Average monthly wage [EUR]', xlab = '',
         names = c('National currency', 'Euro'))
 ```
 
@@ -288,7 +289,7 @@ data_with_cat = data_with_cat[order(data_with_cat$salary, decreasing = TRUE),]
 data_with_cat$cat = ifelse(is.na(data_with_cat$euro), 'gray', 
                            ifelse(data_with_cat$euro == 1, 'lightblue', 'yellow'))
 
-barplot(data_with_cat$salary, names.arg = data_with_cat$geo, ylab = 'Average wage per month [ € ]', 
+barplot(data_with_cat$salary, names.arg = data_with_cat$geo, ylab = 'Average wage per month [EUR]', 
         col = data_with_cat$cat, las= 2, cex.axis = 0.7)
 mtext('Average wages by euro usage', outer = TRUE, cex = 1.75, line = -2.5)
 legend('topright', legend = c('Euro', 'National currency', 'Not relevant'), 
@@ -302,15 +303,15 @@ Tam je však možné nájsť aj nenulový počet krajín s eurom.
 
 Poďme teda otestovať vplyv eura na strednú hodnotu mesačných platov.
 
-$ H_0 : $ Stredná hodnota mesačných platov nezávisí na používaní eura.
+$H_0 :$ Stredná hodnota mesačných platov nezávisí na používaní eura.
 
-$ H_A : $ neplatí $ H_0 $.
+$H_A :$ neplatí $H_0$.
 
 ```{r}
 anova(aov(data$salary ~ data$euro))
 ```
 
-Nezamietam hypotézu $ H_0 $ na hladine významnosti $ 5 \%$.
+Nezamietam hypotézu $H_0$ na hladine významnosti $5 \%$.
 
 ### Vysoké školy
 
@@ -407,7 +408,7 @@ Je tiež známe, že napriek veľmi rozvinutému severu krajiny, na juhu možnos
 
 ```{r}
 data = merge(data, edu)
-data_eu = merge(edu_eu, salary_eu)
+data_eu = merge(data_eu, edu_eu)
 plot(data$edu, data$salary, col = 'blue', pch = 16, main='Tertiary education and average wage in EU',
      xlab = 'Tertiary education [ % ]', ylab = 'Average monthly wage [EUR]')
 points(data_eu$edu, data_eu$salary, col=c('yellow', 'orange'), pch=16)
@@ -420,9 +421,9 @@ Minimálne však je vidno, že väčšinou s úrovňou vysokoškolského vzdelan
 
 Poďme si koreláciu otestovať testom nulovosti *Pearsonovho* korelačného koeficientu.
 
-$ H_0 : \rho = 0 $
+$H_0 : \rho = 0$
 
-$ H_A : \rho \ne 0 $
+$H_A : \rho \ne 0$
 
 ```{r}
 cor.test(data$edu, data$salary, method = 'pearson')
@@ -470,9 +471,9 @@ Takisto sa zvyšuje aj tlak na zvyšovanie miezd, keďže práca v zahraničí u
 
 Tvrdenia podporím testom nulovosti *Pearsonovho* korelačného koeficientu.
 
-$ H_0 : \rho = 0 $
+$H_0 : \rho = 0$
 
-$ H_A : \rho \ne 0 $
+$H_A : \rho \ne 0$
 
 ```{r}
 cor.test(data$in_eu, data$salary, method = 'pearson')
@@ -496,9 +497,6 @@ Tá spočíta odhady $\rho_{i,j}$ a $p$-hodnoty všetkých dvojíc regresorov.
 Keďže regresor *euro* je kategorický, pretypujem ho v súlade s *one-hot encoding* na numerický.
 
 ```{r}
-#install.packages("psych")
-library(psych)
-
 data_for_corr_test = data[c('gdp', 'edu', 'euro', 'in_eu')]
 data_for_corr_test$euro = as.integer(data_for_corr_test$euro) - 1
 
@@ -510,10 +508,10 @@ res$p
 ```
 
 Z výslednej matice $p$-hodnôt nezamietam hypotézy o nekorelovanosti pre dvojice 
-`gdp`-`euro`, `edu`-`euro` a  `edu`-`in_eu` na $5\%$ hladine významnosti. 
+**gdp - euro**, **edu - euro** a  **edu - in_eu** na $5\%$ hladine významnosti. 
 
 Z výslednej matice $p$-hodnôt zamietam hypotézy o nekorelovanosti pre dvojice 
-`gdp`-`edu`, `gdp`-`in_eu` a  `euro`-`in_eu` v prospech hypotézy, že regresory sú korelované na $5\%$ hladine významnosti. 
+**gdp - edu**, **gdp - in_eu** a  **euro - in_eu** v prospech hypotézy, že regresory sú korelované na $5\%$ hladine významnosti. 
 
 
 ```{r}
@@ -554,67 +552,302 @@ Preto si dovolím použiť všetky regresory.
 
 ----
 
+### Lineárny model bez interakcií
+
+Vyskúšam jednoduchú lineárnu regresiu so všetkými vyššie vybranými regresormi bez interakcií. 
+Formálne:
+
+$$ Y = \beta_0 + \beta_1 \cdot \text{GDP} + \beta_2 \cdot \text{euro} + \beta_3 \cdot \text{in_eu} + \beta_4 \cdot \text{in_eu} + \epsilon, \mathrm{E} \epsilon = 0$$
+
 ```{r}
 fit_all = lm(salary ~ gdp + euro + edu + in_eu, data = data)
 summary(fit_all)
 ```
 
+Model je možné interpretovať takto:
+
+* Základný odhad v krajinách platiacich vlastnou menou je $-153$€.
+* Za každé euro v HDP na obyvateľa sa mzda zvýši o $4.7$ centov.
+* Ak krajina platí eurom, zo mzdy strhávame $225$€.
+* Za každé percento obyvateľov s vysokoškolským vzdelaním pridávame $27$€.
+* Za každý rok členstva si obyvatelia prilepšia o $19$€.
+
+Z vyššie uvedených regresorov sú štatisticky významné len HDP na obyvateľa a dĺžka členstva, na hladine významnosti $5 \%$.
+
+Pre istotu upozorňujem na možnú dezinterpretáciu regresného koeficientu pre HDP na obyvateľa.
+Môže sa zdať, že táto hodnota je veľmi nízka, každopádne je dôležité mať na pamäti, že vysvetľovaná premenná je **mesačná** mzda a HDP na obyvateľa je za celý **rok**.
+
+Model má pomerne vysoký adjustovaný koeficient determinácie, avšak je očividné z $p$-hodnôt testov nulovosti regresných koeficientov, že najdôležitejším regresorom je HDP na obyvateľa, ktoré poskytuje dobrý odhad možno aj samo osebe.
+Ostatné koeficienty používa model zdá sa len na korekciu odhadov neštandardne chovajúcich sa dátových bodov vzhľadom k HDP.
+
+Minimálne a maximálne reziduum zhruba $\pm 1000$€ je pomerne veľké.
+Avšak polovica reziduí sa nachádza medzi $\pm 300$€ čo pri takejto veĺkej škále priemerných platov je prijateľná hodnota.
+Očakávam teda, že budem mať nejaké odľahlé hodnoty.
+
 ```{r}
-par(mfrow=c(1, 3))
-plot(fit_all, which = c(1, 2, 3))
-```
-```{r}
-hist(fit_all$residuals)
+par(mfrow=c(2, 2))
+plot(fit_all, which = c(1, 2, 3, 4))
 ```
 
+Zo všetkých vizualizácií reziduí jednoznačne vytŕča 18. krajina, ale aj s poradovým číslom 7.
 
+```{r}
+as.character(data[c(18, 7),]$geo)
+```
+
+Vidíme, že sú nimi krajiny *Luxembursko* a *Dánsko*.
+Luxembursko nesmie nikoho prekvapiť, je to krajina príliš malá a preto sa odlišuje od celého rádu štatistík vrámci EÚ.
+Dánsko je krajina s najvyššími platmi ktorá nepoužíva euro.
+
+Pozriem sa teraz na normalitu reziduí.
+
+```{r}
+hist(fit_all$residuals, col = 'lightblue', xlab='Residuals', main='Histogram of residuals')
+```
+
+Tak ako sa zdalo vyššie, je vidno, že väčšina reziduí je pomerne blízka k nule, avšak máme aj odľahlé hodnoty.
+Poďme sa pozrieť, či to ešte splní podmienky normality.
+
+$H_0 :$ Reziduá pochádzajú z normálneho rozdelenia.
+
+$H_A :$ Neplatí $H_0$.
 
 ```{r}
 shapiro.test(fit_all$residuals)
 ```
 
+Na obvyklej hladine významnosti $5\%$ nezamietam hypotézu o normalite reziduí.
+
+Teraz si vizualizujem ako sa predikcia modelu líši od reálnych hodnôt.
+
 ```{r}
-fit_all_int = lm(salary ~ gdp * euro * edu * in_eu, data = data)
+pred = predict.lm(fit_all, data)
+plot(data$salary, pred, xlim = c(500, 6500), ylim = c(500, 6500), pch = 16 , col = 'blue',
+     xlab = 'True', ylab = 'Prediction', main='Average monthly wage')
+abline(a=0, b=1, lwd = 2, col='red')
+```
+
+Je vidno, že so zvyšujúcimi sa reálnymi hodnotami sa zvyšuje aj odchýlka predikcie.
+Poďme to otestovať *Breuschovým - Paganovým* testom.
+
+$H_0 :$ Model je homoskedasticitný.
+
+$H_A :$ Model je heteroskedasticitný.
+
+```{r}
+bptest(fit_all)
+```
+
+Zamietam $H_0$ v prospech heteroskedasticity na hladine $5\%$.
+
+### Lineárny model s interakciami
+
+Model bez interakcií nespĺňal homoskedasticitu, preto vyskúšam model so všetkými interakciami.
+
+```{r}
+fit_all_int = lm(salary ~ gdp * edu * in_eu * euro, data = data)
 summary(fit_all_int)
 ```
 
-```{r}
-par(mfrow=c(1, 3))
-plot(fit_all_int, which = c(1, 2, 3))
+Dostávame čo sa reziduí týka veľmi presný model.
+O presnosti vypovedá aj vysoká hodnota adjustovaného koeficientu determinácie.
+Avšak nemáme ani jeden štatisticky významný regresný koeficient.
+To značí o vysokej miere kolinearity.
+To nie je prekvapením, keďže máme 16 rôznych koeficientov pre 26 dátových bodov.
+Model je veľmi ťažko interpretovateľný a pre dobro nás všetkých interpretáciu vynechávam.
+
+V rýchlosti však zhrniem kvalitu modelu.
+
+```{r warning = FALSE}
+par(mfrow=c(2, 2))
+plot(fit_all_int, which = c(1, 2, 3, 4))
 ```
 
+Reziduá sú relatívne nízke, pomerne homoskedastické. 
+
 ```{r}
-hist(fit_all_int$residuals)
+pred = predict.lm(fit_all_int, data)
+plot(data$salary, pred, xlim = c(500, 6500), ylim = c(500, 6500), pch = 16 , col = 'blue',
+     xlab = 'True', ylab = 'Prediction', main='Average monthly wage')
+abline(a=0, b=1, lwd = 2, col='red')
 ```
+
+Oproti vyššiemu modelu je tento veľmi presný.
+
+```{r}
+hist(fit_all_int$residuals, col = 'lightblue', xlab='Residuals', main='Histogram of residuals')
+```
+
+Pre prílišné prispôsobenie sa modelu dátam, dostávame reziduá, ktoré sú príliš sústredené okolo priemeru a hodnoty, ktoré by vyššie boli ešte v poriadku sa stávajú odľahlými.
+Otestujme to.
+
+$H_0 :$ Reziduá pochádzajú z normálneho rozdelenia.
+
+$H_A :$ Neplatí $H_0$.
 
 ```{r}
 shapiro.test(fit_all_int$residuals)
 ```
 
+Skutočne zamietam hypotézu o normalite reziduí na hladine významnosti $5\%$.
+
+### Výber finálneho modelu
+
+Vyššie dve modely nám pekne ukázali extrémy všeobecne všetkých modelov.
+Na jednej strane máme jednoduchý ale nepresný model a na strane druhej takmer exaktne presný avšak ťažko pochopiteľný.
+
+Skvelým nástrojom `R`, ktorý nám pomôže nájsť kompromis je `step` využívajúci ešte perfektnejší nástroj štatistiky `AIC` - Akaikeho informačné kritérium.
+Tento ukazateľ sa spočíta z vierohodnostnej funkcie odhadu regresných koeficientov a ich počtom.
+Pričom cieľom je nájsť najmenšiu takúto hodnotu.
+Funkcia `step` nato potom používa priamočiary algoritmus a to taký, že začína s prázdnym modelom, predikujúcim konštantu, potom pri každej iterácii pridá regresor, alebo interakciu z už pridaných regresorov, ktorý znižuje hodnotu `AIC` najviac. Toto sa opakuje až do chvíle, keď už nie je možné pridať regresor, ktorý znižuje `AIC`.
+
 ```{r}
 step(lm(data$salary~1), 
-     scope = list(lower=~1, upper=~data$gdp * data$euro * data$edu * data$in_eu))
+     scope = list(lower=~1, upper=~data$gdp * data$edu * data$in_eu * data$euro))
 ```
 ```{r}
-fit_fin = lm(formula = data$salary ~ data$gdp + data$euro + data$in_eu + 
-    data$gdp:data$in_eu + data$in_eu:data$euro)
+fit_lowest_aic = lm(formula = salary ~ gdp + in_eu + euro + gdp:in_eu + in_eu:euro, data = data)
+summary(fit_lowest_aic)
+```
+
+Algoritmus nám teda z regresorov vylúčil vzdelanie.
+Výsledný model však obsahuje štatisticky nevýznamný regresor meny, preto ho odstránim a pozriem sa ako to ovplyvní model.
+
+Formálne teda budem predpokladať, že:
+
+$$ Y= \beta_0 + \beta_1 \cdot \text{GDP} + \beta_2 \cdot \text{in_eu} + \beta_3 \cdot (\text{GDP} \cdot \text{in_eu}) + \beta_4 \cdot (\text{euro} \cdot \text{in_eu}) + \epsilon, \mathrm{E} \epsilon = 0$$
+
+```{r}
+fit_fin = lm(formula = salary ~ gdp + in_eu + gdp:in_eu + in_eu:euro, data=data)
 summary(fit_fin)
 ```
 
+Je vidno, že získaný model má všetky koeficienty regresorov štatisticky významne odlišné od nuly na štandardnej hladine významnosti.
+
+#### Interpretácia
+Tento model je možné interpretovať ako:
+
+* Počiatočná hodnota pre štáty prijaté do EÚ v 2015 s nulovým HDP je $-515$€.
+* Za každé euro v HDP na obyvateľa pre čerstvých členov pripisujeme $0.094$€.
+* Za každý rok v EÚ pripočítavame $57$€.
+* Za každý rok v EÚ sa vplyv HDP znižuje o $0.001$€, napr. pre $10$ ročného člena pripisujeme za každé euro HDP $0.094 - 10 \cdot 0.001 = 0.084$€.
+Pre starších členov zjavne rast miezd vzhľadom k HDP jemne spomaľuje.
+* Ak sa v krajine platí eurom, tak za každý rok členstva pripočítavme $57 - 18 = 39$€.
+Pre krajiny platiace eurom sa rast miezd vzhľadom k dĺžke členstva spomaľuje.
+
+
+#### Analýza reziduí
+
+Poďme sa pozrieť na reziduá modelu.
+
 ```{r}
-fit_fin = lm(formula = data$salary ~ data$gdp + data$in_eu + 
-    data$gdp:data$in_eu + data$in_eu:data$euro)
-summary(fit_fin)
+par(mfrow=c(2, 2))
+plot(fit_fin, which = c(1, 2, 3, 4))
 ```
+
+Je možné vidieť, že *Luxembursko* a *Dánsko* sú opäť odľahlými bodmi.
+
 ```{r}
-par(mfrow=c(1, 3))
-plot(fit_fin, which = c(1, 2, 3))
+hist(fit_fin$residuals, col = 'lightblue', xlab='Residuals', main='Histogram of residuals')
 ```
-```{r}
-hist(fit_fin$residuals)
-```
+
+Na grafe to vyzerá pomerne sľubne, je symetrický okolo nuly, ale pomerne málo bodov je blízko priemeru.
+
+$H_0 :$ Reziduá pochádzajú z normálneho rozdelenia.
+
+$H_A :$ Neplatí $H_0$.
+
 
 ```{r}
 shapiro.test(fit_fin$residuals)
 ```
 
+Nezamietam normalitu redziduí na bežnej hladine významnosti.
+
+*Breschovým - Paganovým* testom overím homoskedasticitu.
+
+$H_0 :$ Model je homoskedasticitný.
+
+$H_A :$ Model je heteroskedasticitný.
+
+```{r}
+bptest(fit_fin)
+```
+
+Nezamietam homoskedasticitu na bežnej hladine významnosti.
+
+#### Vizualizácia modelu
+
+```{r}
+pred = predict.lm(fit_fin, data)
+plot(data$salary, pred, xlim = c(500, 6500), ylim = c(500, 6500), pch = 16 , col = 'blue',
+     xlab = 'True', ylab = 'Prediction', main='Average monthly wage')
+abline(a=0, b=1, lwd = 2, col='red')
+```
+
+Model vyzerá byť o čosi nepresnejší ako komplikovaný s interakciami.
+Je ale vidno zlepšenie oproti jednoduchému modelu bez interakcií.
+Hlavne čo sa týka variability modelu v závislosti na hodnote vysvetľovanej premennej.
+
+#### Test redukcie modelu
+
+Následne sa pozriem, či je možné bez väčšej straty na presnosti redukovať pôvodný model so všetkými interakciami na najnižší s AIC skóre a na model po odobratí eura.
+Testy prevediem $\chi^2$ aj $\mathrm{F}$ testom.
+
+```{r}
+anova(fit_fin, fit_lowest_aic, fit_all_int, test='Chisq')
+```
+
+```{r}
+anova(fit_fin, fit_lowest_aic, fit_all_int, test='F')
+```
+
+Obe testy dospeli k záveru, že odobratím eura z modelu s najnižším AIC nespôsobí štatisticky významnú stratu presnosti.
+Takisto však vidíme, že obe model so všetkými interakciami nie je možné zredukovať bez straty na presnosti.
+Keďže trpel vysokou kolinearitou a ani nemal normálne rozdelené reziduá, vyberám ako finálny model ten posledný.
+
+```{r}
+write.csv(data, 'data.csv', row.names = FALSE)
+write.csv(data_eu, 'eu_data.csv', row.names = FALSE)
+data_eu
+```
+
+
+```{r}
+#install.packages("plotly")
+library(plotly)
+
+data_to_plot = data
+data_to_plot$geo = c("AUT", "BEL", "BGR", "CYP", "CZE", "DEU", "DNK", "EST", "GRC", "ESP",
+ "FIN", "FRA", "HRV", "HUN", "IRL", "ITA", "LTU", "LUX", "LVA", "MLT",
+ "POL", "PRT", "ROU", "SWE", "SVN", "SVK")
+
+
+fig <- plot_ly(
+  data = data_to_plot,
+  type = 'choropleth',
+  locations = ~geo,
+  locationmode = 'ISO-3',
+  z = ~gdp,
+  colorscale = list(
+    c(0.0, "#f5fdaeff"),
+    c(0.5, "#48afa0ff"),
+    c(1.0, "#035376ff")
+  )
+)
+
+fig <- fig %>% layout(
+  margin = list(l = -500, r = 0, b = 0, t = 0),
+  geo = list(
+    scope = 'world',
+    projection = list(type = 'mercator'),
+    lonaxis = list(range = c(-25, 45)),
+    lataxis = list(range = c(38, 73)),
+    showcountries = TRUE,
+    countrycolor = "white"
+  )
+)
+
+fig
+
+```
