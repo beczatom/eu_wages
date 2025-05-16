@@ -91,8 +91,8 @@ Vidíme, že skutočne máme 26 štátov, s najmenšou priemernou mzdou 531€ a
 
 ```{r}
 par(mfrow = c(1, 2))
-hist(salary$salary, main = '', xlab = 'Wage [EUR]', ylab = 'Frequency', col = 'lightblue')
-boxplot(salary$salary, ylab = 'Wage [EUR]', col = 'lightblue')
+hist(salary$salary, main = '', xlab = 'Wage [EUR]', ylab = 'Frequency', col = 'cornflowerblue')
+boxplot(salary$salary, ylab = 'Wage [EUR]', col = 'cornflowerblue')
 mtext('Average monthly wage in EU countries', outer = TRUE, cex = 1.75, line = -2.5)
 ```
 
@@ -101,17 +101,15 @@ Samozrejme je vidieť aj 3 štáty ktoré sú medzi týmito skupinami.
 Máme aj veľmi chudobné štáty (na európske pomery), ktoré majú priemernú mzdu pod 1000€, ale aj veľmi bohaté štáty nad 4000€.
 
 ```{r}
-par(mar=c(6,5,4,1))
-data_with_cat = rbind(salary, salary_eu)
-data_with_cat$cat = grepl('^.{2}$' , data_with_cat$geo)
-data_with_cat$cat = as.character(data_with_cat$cat)
-data_with_cat = data_with_cat[order(data_with_cat$salary, decreasing = TRUE),]
+par(mar=c(3,5,5,1))
+ordered_data = salary[order(salary$salary, decreasing = TRUE),]
 
-data_with_cat$cat = ifelse(data_with_cat$cat, 'lightblue', 'yellow')
-
-barplot(data_with_cat$salary, names.arg = data_with_cat$geo, ylab = 'Wage [EUR]', 
-        col = data_with_cat$cat, las= 2)
-mtext('Average monthly wage in EU countries', outer = TRUE, cex = 1.75, line = -2.5)
+barplot(ordered_data$salary, names.arg = ordered_data$geo, ylab = 'Wage [EUR]', 
+        col = 'cornflowerblue', las= 2)
+abline(a = salary_eu[salary_eu$geo == 'EA20',]$salary, b = 0, lwd = 2, col = 'gold', lty = 5)
+abline(a = salary_eu[salary_eu$geo == 'EU27_2020',]$salary, b = 0, lwd = 2, col = 'darkblue', lty = 5)
+legend('topright', legend=c('EA20', 'EU27_2020'), col = c('gold', 'darkblue'), lwd = 2, lty = 5)
+mtext('Average monthly wage in EU countries', outer = TRUE, cex = 1.5, line = -2.5)
 ```
 
 Rebríček najvyšších miezd neprekvapivo otvára *Luxembursko* nasledované *Dánskom* a *Írskom*.
@@ -191,8 +189,8 @@ Je vidno obrovský rozdiel medzi priemerom a mediánom, preto očakávam, že tu
 
 ```{r}
 par(mfrow = c(1, 2))
-hist(gdp$gdp, main = '', xlab = 'GDP per capita [EUR/capita]', ylab = 'Frequency', col = 'lightblue')
-boxplot(gdp$gdp, ylab = 'GDP per capita [EUR/capita]', col = 'lightblue')
+hist(gdp$gdp, main = '', xlab = 'GDP per capita [EUR/capita]', ylab = 'Frequency', col = 'cornflowerblue')
+boxplot(gdp$gdp, ylab = 'GDP per capita [EUR/capita]', col = 'cornflowerblue')
 mtext('GDP per capita', outer = TRUE, cex = 1.75, line = -2.5)
 ```
 
@@ -201,17 +199,15 @@ Nad touto hranicou sa nachádzajú už len štyri krajiny.
 
 
 ```{r}
-par(mar=c(6,5,4,1))
-data_with_cat = rbind(gdp, gdp_eu)
-data_with_cat$cat = grepl('^.{2}$' , data_with_cat$geo)
-data_with_cat$cat = as.character(data_with_cat$cat)
-data_with_cat = data_with_cat[order(data_with_cat$gdp, decreasing = TRUE),]
+par(mar=c(3,5,5,1))
+ordered_data = gdp[order(gdp$gdp, decreasing = TRUE),]
 
-data_with_cat$cat = ifelse(data_with_cat$cat, 'lightblue', 'yellow')
-
-barplot(data_with_cat$gdp, names.arg = data_with_cat$geo, ylab = 'GDP per capita [EUR/capita]', 
-        col = data_with_cat$cat, las= 2, cex.axis = 0.7)
-mtext('GDP per capita in EU countries', outer = TRUE, cex = 1.75, line = -2.5)
+barplot(ordered_data$gdp, names.arg = ordered_data$geo, ylab = 'Wage [EUR]', 
+        col = 'cornflowerblue', las= 2, cex.axis = 0.7)
+abline(a = gdp_eu[gdp_eu$geo == 'EA20',]$gdp, b = 0, lwd = 2, col = 'gold', lty = 5)
+abline(a = gdp_eu[gdp_eu$geo == 'EU27_2020',]$gdp, b = 0, lwd = 2, col = 'blue', lty = 5)
+legend('topright', legend=c('EA20', 'EU27_2020'), col = c('gold', 'blue'), lwd = 2, lty = 5)
+mtext('GDP per capita in EU countries', outer = TRUE, cex = 1.5, line = -2.5)
 ```
 
 Máme možnosť vidieť takmer identický graf ako graf priemerných mesačných miezd.
@@ -222,11 +218,11 @@ Výrazným rozdielom je ešte vytŕčajúce *Luxembursko*, ktoré to dosahuje hl
 ```{r}
 data = merge(gdp, salary)
 data_eu = merge(gdp_eu, salary_eu)
-plot(data$gdp, data$salary, col = 'blue', pch = 16, main='GDP and average wage in EU',
+plot(data$gdp, data$salary, col = 'cornflowerblue', pch = 16, main='GDP and average wage in EU',
      xlab = 'GDP per capita [EUR/capita]', ylab = 'Average monthly wage [EUR]')
-points(data_eu$gdp, data_eu$salary, col=c('yellow', 'orange'), pch=16)
+points(data_eu$gdp, data_eu$salary, col=c('gold', 'darkblue'), pch=16)
 legend('bottomright', legend = c('EU member states', 'Eurozone mean', 'EU mean'), 
-       col = c('blue', 'yellow', 'orange'), pch = 16)
+       col = c('cornflowerblue', 'gold', 'darkblue'), pch = 16)
 ```
 
 Až na zopár bodov, je vidno, že medzi veličinami je takmer dokonalý lineárny vzťah.
@@ -268,11 +264,11 @@ pie(c(with_euro, length(data$euro) - with_euro),
     labels = c(paste0('Euro (', with_euro, ')'), 
                paste0('National currency (', length(data$euro) - with_euro, ')')),
     init.angle = 180, 
-    col = c('lightblue', 'yellow'),
+    col = c('cornflowerblue', 'gold'),
     cex = 0.9)
 
 boxplot(data$salary ~ data$euro, 
-        col = c('yellow', 'lightblue'),
+        col = c('gold', 'cornflowerblue'),
         ylab = 'Average monthly wage [EUR]', xlab = '',
         names = c('National currency', 'Euro'))
 ```
@@ -282,20 +278,21 @@ Takisto je vidno, že priemerný plat v štátoch platiacich eurom je okolo tis�
 Napriek malému počtu krajín používajúcich národnú menu, je rozptyl hodnôt takmer rovnaký ako s dvakrát početnejšou skupinou používajúcich euro.
 
 ```{r}
-par(mar=c(6,5,5,1))
+par(mar=c(3,5,5,1))
 
 salary_eu$euro = NA
 
-data_with_cat = rbind(data[c('geo', 'salary', 'euro')], salary_eu)
+data_with_cat = data[c('geo', 'salary', 'euro')]
 data_with_cat = data_with_cat[order(data_with_cat$salary, decreasing = TRUE),]
-data_with_cat$cat = ifelse(is.na(data_with_cat$euro), 'gray', 
-                           ifelse(data_with_cat$euro == 1, 'lightblue', 'yellow'))
+data_with_cat$cat = ifelse(data_with_cat$euro == 1, 'cornflowerblue', 'gold')
 
 barplot(data_with_cat$salary, names.arg = data_with_cat$geo, ylab = 'Average wage per month [EUR]', 
         col = data_with_cat$cat, las= 2, cex.axis = 0.7)
+abline(a = salary_eu[salary_eu$geo == 'EA20',]$salary, b = 0, lwd = 2, col = 'darkorange', lty = 5)
+abline(a = salary_eu[salary_eu$geo == 'EU27_2020',]$salary, b = 0, lwd = 2, col = 'darkblue', lty = 5)
 mtext('Average wages by euro usage', outer = TRUE, cex = 1.75, line = -2.5)
-legend('topright', legend = c('Euro', 'National currency', 'Not relevant'), 
-       col = c('lightblue', 'yellow', 'gray'), pch = 16)
+legend('topright', legend = c('Euro', 'National currency', 'EA20', 'EU27_2020'), 
+       col = c('cornflowerblue', 'gold', 'darkorange', 'darkblue'), pch = c(16, 16, -1, -1), lty = c(0, 0, 5, 5), lwd = c(0, 0, 2, 2))
 ```
 
 Z grafu je očividné, kde sa berie vysoká variancia pre štáty platiace národnou menou.
@@ -371,8 +368,8 @@ Polovica krajín má vysokoškolskú vzdelanosť na úrovni medzi 21 a 33 percen
 
 ```{r}
 par(mfrow = c(1, 2))
-hist(edu$edu, main = '', xlab = 'Tertiary education [ % ]', ylab = 'Frequency', col = 'lightblue')
-boxplot(edu$edu, ylab = 'Tertiary education [ % ]', col = 'lightblue')
+hist(edu$edu, main = '', xlab = 'Tertiary education [ % ]', ylab = 'Frequency', col = 'cornflowerblue')
+boxplot(edu$edu, ylab = 'Tertiary education [ % ]', col = 'cornflowerblue')
 mtext('Tertiary education', outer = TRUE, cex = 1.75, line = -2.5)
 ```
 
@@ -380,16 +377,15 @@ Tak ako vyššie čísla naznačovali, skutočne dáta vyzerajú takmer ako z ro
 
 
 ```{r}
-par(mar=c(6,5,4,1))
-data_with_cat = rbind(edu, edu_eu)
-data_with_cat$cat = grepl('^.{2}$' , data_with_cat$geo)
-data_with_cat$cat = as.character(data_with_cat$cat)
-data_with_cat = data_with_cat[order(data_with_cat$edu, decreasing = TRUE),]
+par(mar=c(3,5,5,1))
+ordered_data = edu[order(edu$edu, decreasing = TRUE),]
 
-data_with_cat$cat = ifelse(data_with_cat$cat, 'lightblue', 'yellow')
-
-barplot(data_with_cat$edu, names.arg = data_with_cat$geo, ylab = 'Tertiary education [ % ]', 
-        col = data_with_cat$cat, las= 2, cex.axis = 0.7)
+barplot(ordered_data$edu, names.arg = ordered_data$geo, ylab = 'Tertiary education [ % ]', 
+        col = 'cornflowerblue', las= 2, cex.axis = 0.7)
+abline(a = edu_eu[edu_eu$geo == 'EA20',]$edu, b = 0, lwd = 2, col = 'gold', lty = 5)
+abline(a = edu_eu[edu_eu$geo == 'EU27_2020',]$edu, b = 0, lwd = 2, col = 'darkblue', lty = 5)
+legend('topright', legend = c('EA20', 'EU27_2020'), 
+       col = c('gold', 'darkblue'), lty = 5, lwd = 2)
 mtext('Tertiary education in EU countries', outer = TRUE, cex = 1.75, line = -2.5)
 ```
 
@@ -411,11 +407,11 @@ Je tiež známe, že napriek veľmi rozvinutému severu krajiny, na juhu možnos
 ```{r}
 data = merge(data, edu)
 data_eu = merge(data_eu, edu_eu)
-plot(data$edu, data$salary, col = 'blue', pch = 16, main='Tertiary education and average wage in EU',
+plot(data$edu, data$salary, col = 'cornflowerblue', pch = 16, main='Tertiary education and average wage in EU',
      xlab = 'Tertiary education [ % ]', ylab = 'Average monthly wage [EUR]')
-points(data_eu$edu, data_eu$salary, col=c('yellow', 'orange'), pch=16)
+points(data_eu$edu, data_eu$salary, col=c('gold', 'darkblue'), pch=16)
 legend('topleft', legend = c('EU member states', 'Eurozone mean', 'EU mean'), 
-       col = c('blue', 'yellow', 'orange'), pch = 16)
+       col = c('cornflowerblue', 'gold', 'darkblue'), pch = 16)
 ```
 
 Preložiť tieto body nejakou priamkou asi veľmi zmysel nedáva.
@@ -462,7 +458,7 @@ Najmladšie *Chorvátsko* sa pripojilo pred dvomi rokmi.
 #### Vzťah s priemernou mzdou 
 
 ```{r}
-plot(data$in_eu, data$salary, col = 'blue', pch = 16, main='Length of EU membership and average monthly wage',
+plot(data$in_eu, data$salary, col = 'cornflowerblue', pch = 16, main='Length of EU membership and average monthly wage',
      xlab = 'Length of membership [ years ]', ylab = 'Average monthly wage [EUR]')
 ```
 
@@ -604,7 +600,7 @@ Dánsko je krajina s najvyššími platmi ktorá nepoužíva euro.
 Pozriem sa teraz na normalitu reziduí.
 
 ```{r}
-hist(fit_all$residuals, col = 'lightblue', xlab='Residuals', main='Histogram of residuals')
+hist(fit_all$residuals, col = 'cornflowerblue', xlab='Residuals', main='Histogram of residuals')
 ```
 
 Tak ako sa zdalo vyššie, je vidno, že väčšina reziduí je pomerne blízka k nule, avšak máme aj odľahlé hodnoty.
@@ -624,9 +620,9 @@ Teraz si vizualizujem ako sa predikcia modelu líši od reálnych hodnôt.
 
 ```{r}
 pred = predict.lm(fit_all, data)
-plot(data$salary, pred, xlim = c(500, 6500), ylim = c(500, 6500), pch = 16 , col = 'blue',
+plot(data$salary, pred, xlim = c(500, 6500), ylim = c(500, 6500), pch = 16 , col = 'cornflowerblue',
      xlab = 'True', ylab = 'Prediction', main='Average monthly wage')
-abline(a=0, b=1, lwd = 2, col='red')
+abline(a=0, b=1, lwd = 2, col='red', lty = 5)
 ```
 
 Je vidno, že so zvyšujúcimi sa reálnymi hodnotami sa zvyšuje aj odchýlka predikcie.
@@ -669,15 +665,15 @@ Reziduá sú relatívne nízke, pomerne homoskedastické.
 
 ```{r}
 pred = predict.lm(fit_all_int, data)
-plot(data$salary, pred, xlim = c(500, 6500), ylim = c(500, 6500), pch = 16 , col = 'blue',
+plot(data$salary, pred, xlim = c(500, 6500), ylim = c(500, 6500), pch = 16 , col = 'cornflowerblue',
      xlab = 'True', ylab = 'Prediction', main='Average monthly wage')
-abline(a=0, b=1, lwd = 2, col='red')
+abline(a=0, b=1, lwd = 2, col='red', lty = 5)
 ```
 
 Oproti vyššiemu modelu je tento veľmi presný.
 
 ```{r}
-hist(fit_all_int$residuals, col = 'lightblue', xlab='Residuals', main='Histogram of residuals')
+hist(fit_all_int$residuals, col = 'cornflowerblue', xlab='Residuals', main='Histogram of residuals')
 ```
 
 Pre prílišné prispôsobenie sa modelu dátam, dostávame reziduá, ktoré sú príliš sústredené okolo priemeru a hodnoty, ktoré by vyššie boli ešte v poriadku sa stávajú odľahlými.
@@ -750,7 +746,7 @@ plot(fit_fin, which = c(1, 2, 3, 4))
 Je možné vidieť, že *Luxembursko* a *Dánsko* sú opäť odľahlými bodmi.
 
 ```{r}
-hist(fit_fin$residuals, col = 'lightblue', xlab='Residuals', main='Histogram of residuals')
+hist(fit_fin$residuals, col = 'cornflowerblue', xlab='Residuals', main='Histogram of residuals')
 ```
 
 Na grafe to vyzerá pomerne sľubne, je symetrický okolo nuly, ale pomerne málo bodov je blízko priemeru.
@@ -782,9 +778,9 @@ Nezamietam homoskedasticitu na bežnej hladine významnosti.
 
 ```{r}
 pred = predict.lm(fit_fin, data)
-plot(data$salary, pred, xlim = c(500, 6500), ylim = c(500, 6500), pch = 16 , col = 'blue',
+plot(data$salary, pred, xlim = c(500, 6500), ylim = c(500, 6500), pch = 16 , col = 'cornflowerblue',
      xlab = 'True', ylab = 'Prediction', main='Average monthly wage')
-abline(a=0, b=1, lwd = 2, col='red')
+abline(a=0, b=1, lwd = 2, col='red', lty = 5)
 ```
 
 Model vyzerá byť o čosi nepresnejší ako komplikovaný s interakciami.
@@ -808,12 +804,9 @@ Obe testy dospeli k záveru, že odobratím eura z modelu s najnižším AIC nes
 Takisto však vidíme, že obe model so všetkými interakciami nie je možné zredukovať bez straty na presnosti.
 Keďže trpel vysokou kolinearitou a ani nemal normálne rozdelené reziduá, vyberám ako finálny model ten posledný.
 
-```{r}
-write.csv(data, 'data.csv', row.names = FALSE)
-write.csv(data_eu, 'eu_data.csv', row.names = FALSE)
-data_eu
-```
+----
 
+Nasleduje generovanie grafov, použitých výhradne v krátkej správe (bez komentára, nezaujímavé).
 
 ```{r}
 
